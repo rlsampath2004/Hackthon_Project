@@ -5,7 +5,9 @@ export default function LoginView({
   onAuthSuccess, 
   onNavigateToRegister, 
   onNavigateToDashboard, 
-  onNavigateToIntro 
+  onNavigateToIntro,
+  isDarkMode,
+  toggleTheme,
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,16 +84,35 @@ export default function LoginView({
           </button>
         )}
 
-        {onNavigateToDashboard && (
-          <button
-            onClick={onNavigateToDashboard}
-            className="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1.5 ms-auto"
-            style={{ color: 'var(--text-muted)', fontSize: '13px' }}
-          >
-            <span>Skip to Dashboard</span>
-            <i className="bi bi-arrow-right"></i>
-          </button>
-        )}
+        <div className="d-flex align-items-center gap-2 ms-auto">
+          {toggleTheme && (
+            <button
+              onClick={toggleTheme}
+              className="theme-switch-btn"
+              title={`Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`}
+              type="button"
+              aria-label="Toggle Theme"
+            >
+              <span className={`theme-pill-option ${!isDarkMode ? 'active' : ''}`}>
+                <i className="bi bi-sun-fill text-warning"></i>
+              </span>
+              <span className={`theme-pill-option ${isDarkMode ? 'active' : ''}`}>
+                <i className="bi bi-moon-stars-fill text-primary"></i>
+              </span>
+            </button>
+          )}
+
+          {onNavigateToDashboard && (
+            <button
+              onClick={onNavigateToDashboard}
+              className="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1.5"
+              style={{ color: 'var(--text-muted)', fontSize: '13px' }}
+            >
+              <span>Skip to Dashboard</span>
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Full-Page Sign In Card */}

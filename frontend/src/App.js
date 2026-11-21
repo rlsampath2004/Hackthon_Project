@@ -345,6 +345,8 @@ export default function App() {
   const netBalance = accounts.reduce((acc, a) => acc + a.balance, 0);
   const savingsRate = totalIncome > 0 ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1) : 0;
 
+  const isAuthPage = activeNav === 'login' || activeNav === 'register';
+
   // 1. Full-Screen Cinematic Intro Video (First Video Plays -> Next Redirects to Login)
   if (activeNav === 'intro') {
     return (
@@ -354,24 +356,26 @@ export default function App() {
 
   return (
     <div className="min-vh-100 d-flex flex-column" style={{ backgroundColor: 'var(--app-bg)' }}>
-      {/* 1. Full-Width Responsive Top Navbar */}
-      <Navbar
-        activeNav={activeNav}
-        setActiveNav={handleNavigate}
-        isDarkMode={isDarkMode}
-        toggleTheme={toggleTheme}
-        onOpenAddModal={() => setIsAddModalOpen(true)}
-        currentUser={currentUser}
-        onSignOut={() => {
-          setCurrentUser(null);
-          localStorage.removeItem('finintel_user');
-          localStorage.removeItem('finintel_token');
-          handleNavigate('login');
-        }}
-      />
+      {/* 1. Full-Width Responsive Top Navbar (Hidden on Login & Register Pages) */}
+      {!isAuthPage && (
+        <Navbar
+          activeNav={activeNav}
+          setActiveNav={handleNavigate}
+          isDarkMode={isDarkMode}
+          toggleTheme={toggleTheme}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          currentUser={currentUser}
+          onSignOut={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('finintel_user');
+            localStorage.removeItem('finintel_token');
+            handleNavigate('login');
+          }}
+        />
+      )}
 
       {/* 2. Main Full-Width Content Container (100% Mobile Responsive) */}
-      <main className="container-fluid px-3 px-lg-5 py-4 flex-grow-1">
+      <main className={`flex-grow-1 ${isAuthPage ? 'd-flex align-items-center justify-content-center p-3' : 'container-fluid px-3 px-lg-5 py-4'}`}>
         {activeNav === 'dashboard' && (
           <>
             {/* Header Title & Evaluation Utilities */}
@@ -570,6 +574,8 @@ export default function App() {
             onNavigateToRegister={() => handleNavigate('register')}
             onNavigateToDashboard={() => handleNavigate('dashboard')}
             onNavigateToIntro={() => handleNavigate('intro')}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
           />
         )}
 
@@ -583,6 +589,8 @@ export default function App() {
             onNavigateToLogin={() => handleNavigate('login')}
             onNavigateToDashboard={() => handleNavigate('dashboard')}
             onNavigateToIntro={() => handleNavigate('intro')}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
           />
         )}
       </main>

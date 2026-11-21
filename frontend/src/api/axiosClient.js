@@ -201,64 +201,37 @@ export const budgetsApi = {
   },
 };
 
-// --- Authentication API ---
+// --- Authentication API (Strict Database Authentication) ---
 export const authApi = {
   login: async (email, password) => {
-    try {
-      const res = await apiClient.post('/auth/login', { email, password });
-      const token = res.token || (typeof res === 'string' ? res : 'jwt-finintel-' + Date.now());
-      return {
-        id: res.userId || 1,
-        name: res.fullName || email.split('@')[0],
-        email: res.email || email,
-        currency: 'USD',
-        role: 'ROLE_USER',
-        token: token,
-      };
-    } catch (err) {
-      // Local fallback for evaluation
-      if (email === 'demo@finintel.ai' || password) {
-        return {
-          id: 1,
-          name: email.split('@')[0],
-          email,
-          currency: 'USD',
-          role: 'ROLE_USER',
-          token: 'jwt-auth-' + Math.random().toString(36).substring(2),
-        };
-      }
-      throw err;
-    }
+    const res = await apiClient.post('/auth/login', { email, password });
+    const token = res.token || (typeof res === 'string' ? res : 'jwt-finintel-' + Date.now());
+    return {
+      id: res.userId || 1,
+      name: res.fullName || email.split('@')[0],
+      email: res.email || email,
+      currency: 'USD',
+      role: 'ROLE_USER',
+      token: token,
+    };
   },
   register: async (userData) => {
-    try {
-      const res = await apiClient.post('/auth/register', {
-        fullName: userData.name || userData.fullName,
-        email: userData.email,
-        phone: userData.phone || '9876543210',
-        password: userData.password,
-      });
+    const res = await apiClient.post('/auth/register', {
+      fullName: userData.name || userData.fullName,
+      email: userData.email,
+      phone: userData.phone || '9876543210',
+      password: userData.password,
+    });
 
-      return {
-        id: res.userId || Date.now(),
-        name: res.fullName || userData.name || userData.fullName,
-        email: res.email || userData.email,
-        phone: res.phone || userData.phone,
-        currency: userData.currency || 'USD',
-        role: 'ROLE_USER',
-        token: 'jwt-auth-' + Math.random().toString(36).substring(2),
-      };
-    } catch (err) {
-      return {
-        id: Date.now(),
-        name: userData.fullName || userData.name,
-        email: userData.email,
-        phone: userData.phone || '',
-        currency: userData.currency || 'USD',
-        role: 'ROLE_USER',
-        token: 'jwt-auth-' + Math.random().toString(36).substring(2),
-      };
-    }
+    return {
+      id: res.userId || Date.now(),
+      name: res.fullName || userData.name || userData.fullName,
+      email: res.email || userData.email,
+      phone: res.phone || userData.phone,
+      currency: userData.currency || 'USD',
+      role: 'ROLE_USER',
+      token: res.token || 'jwt-auth-' + Math.random().toString(36).substring(2),
+    };
   },
 };
 

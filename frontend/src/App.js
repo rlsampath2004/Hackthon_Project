@@ -203,8 +203,13 @@ export default function App() {
     setIsDarkMode((prev) => !prev);
   };
 
-  // Smooth Tab Switcher with Skeleton Loading
+  // Smooth Tab Switcher with Strict Authentication Guard
   const handleNavigate = (navId) => {
+    const isPublicNav = navId === 'login' || navId === 'register' || navId === 'intro';
+    if (!currentUser && !isPublicNav) {
+      setActiveNav('login');
+      return;
+    }
     setActiveNav(navId);
     window.scrollTo({ top: 0, behavior: 'instant' });
     setIsLoading(true);
@@ -633,7 +638,6 @@ export default function App() {
               handleNavigate('dashboard');
             }}
             onNavigateToRegister={() => handleNavigate('register')}
-            onNavigateToDashboard={() => handleNavigate('dashboard')}
             onNavigateToIntro={() => handleNavigate('intro')}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
@@ -648,7 +652,6 @@ export default function App() {
               handleNavigate('dashboard');
             }}
             onNavigateToLogin={() => handleNavigate('login')}
-            onNavigateToDashboard={() => handleNavigate('dashboard')}
             onNavigateToIntro={() => handleNavigate('intro')}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}

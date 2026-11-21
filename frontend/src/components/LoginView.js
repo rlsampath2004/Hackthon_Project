@@ -17,29 +17,11 @@ export default function LoginView({
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // 1-Click Fast Demo Login (Alex Vance)
-  const handleDemoLogin = async () => {
+  // Quick Fill Demo Credentials (Alex Vance)
+  const handleDemoLogin = () => {
+    setEmail('demo@finintel.ai');
+    setPassword('Password123!');
     setErrorMessage('');
-    setIsLoading(true);
-
-    try {
-      const user = await authApi.login('demo@finintel.ai', 'Password123!');
-      user.name = 'Alex Vance';
-      user.email = 'demo@finintel.ai';
-      user.currency = 'USD';
-      user.role = 'ROLE_USER';
-
-      setSuccessMessage('Welcome back, Alex. Initializing session...');
-      setTimeout(() => {
-        localStorage.setItem('finintel_user', JSON.stringify(user));
-        localStorage.setItem('finintel_token', user.token);
-        setIsLoading(false);
-        if (onAuthSuccess) onAuthSuccess(user);
-      }, 500);
-    } catch (err) {
-      setIsLoading(false);
-      setErrorMessage(err.response?.data?.message || 'Unable to authenticate. Please retry.');
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -65,7 +47,12 @@ export default function LoginView({
       }, 450);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.response?.data?.message || 'Incorrect email or password. Please try again.');
+      if (!err.response) {
+        setErrorMessage('Cannot reach backend server at http://localhost:8989. Please ensure the backend is running.');
+      } else {
+        const serverMsg = err.response?.data?.message || err.response?.data?.error;
+        setErrorMessage(serverMsg || 'Authentication failed. Please check your credentials.');
+      }
     }
   };
 

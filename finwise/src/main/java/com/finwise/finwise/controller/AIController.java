@@ -3,9 +3,13 @@ package com.finwise.finwise.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +23,15 @@ import com.finwise.finwise.service.AIService;
 @CrossOrigin(origins = "*")
 public class AIController {
 
+    private static final Logger log = LoggerFactory.getLogger(AIController.class);
+
     private final AIService aiService;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${gemini.api.key:${GEMINI_API_KEY:}}")
     private String geminiApiKey;
 
-    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent}")
+    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent}")
     private String geminiApiUrl;
 
     public AIController(AIService aiService) {
@@ -36,7 +43,6 @@ public class AIController {
             return null;
         }
         try {
-            RestTemplate restTemplate = new RestTemplate();
             String url = geminiApiUrl + "?key=" + geminiApiKey;
             Map<String, Object> body = Map.of(
                 "contents", List.of(
@@ -47,23 +53,26 @@ public class AIController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                List candidates = (List) response.getBody().get("candidates");
-                if (candidates != null && !candidates.isEmpty()) {
-                    Map first = (Map) candidates.get(0);
-                    Map content = (Map) first.get("content");
-                    if (content != null) {
-                        List parts = (List) content.get("parts");
-                        if (parts != null && !parts.isEmpty()) {
-                            Map textPart = (Map) parts.get(0);
-                            return (String) textPart.get("text");
-                        }
-                    }
-                }
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody == null) {
+                return null;
+            }
+            if (responseBody.get("candidates") instanceof List<?> candidates && !candidates.isEmpty()
+                    && candidates.get(0) instanceof Map<?, ?> first
+                    && first.get("content") instanceof Map<?, ?> content
+                    && content.get("parts") instanceof List<?> parts && !parts.isEmpty()
+                    && parts.get(0) instanceof Map<?, ?> part
+                    && part.get("text") instanceof String text
+                    && !text.isBlank()) {
+                return text;
             }
         } catch (Exception e) {
-            // Silently fall back to deterministic classification
+            // Log only the message: the exception text may include the URL containing the API key
+            log.warn("Gemini call failed, falling back to rule-based logic: {}", e.getMessage());
         }
         return null;
     }

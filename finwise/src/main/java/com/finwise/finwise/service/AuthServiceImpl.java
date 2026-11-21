@@ -27,15 +27,16 @@ public class AuthServiceImpl implements AuthService {
 	
 	public User registerUser(RegisterRequest request) {
 
-		if (userRepository.existsByEmail(request.getEmail())) {
-			throw new RuntimeException("Email already registered");
+		String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+		if (userRepository.existsByEmail(cleanEmail)) {
+			throw new RuntimeException("Email is already registered. Please log in.");
 		}
 
 		User user = new User();
 
-		user.setFullName(request.getFullName());
-		user.setEmail(request.getEmail());
-		user.setPhone(request.getPhone());
+		user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
+		user.setEmail(cleanEmail);
+		user.setPhone(request.getPhone() != null ? request.getPhone().trim() : "");
 		user.setPassword(passwordEncoder.encode(request.getPassword()));
 
 		return userRepository.save(user);
@@ -44,12 +45,19 @@ public class AuthServiceImpl implements AuthService {
 	
 	public String loginUser(LoginRequest request) {
 
-		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new RuntimeException("User not found"));
+		String cleanEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+		User user = userRepository.findByEmail(cleanEmail)
+				.orElseThrow(() -> new RuntimeException("No account registered with email '" + cleanEmail + "'. Please register first."));
 
-		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+		boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+		if (!matches && request.getPassword() != null && request.getPassword().equals(user.getPassword())) {
+			user.setPassword(passwordEncoder.encode(request.getPassword()));
+			userRepository.save(user);
+			matches = true;
+		}
 
-			throw new RuntimeException("Invalid password");
+		if (!matches) {
+			throw new RuntimeException("Invalid password. Please check your credentials.");
 		}
 
 		return jwtService.generateToken(user.getEmail());

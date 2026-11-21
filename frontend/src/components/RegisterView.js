@@ -88,7 +88,12 @@ export default function RegisterView({
       }, 500);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.response?.data?.message || 'Registration failed. Please try again.');
+      if (!err.response) {
+        setErrorMessage('Cannot reach backend server at http://localhost:8989. Please ensure the backend is running.');
+      } else {
+        const serverMsg = err.response?.data?.message || err.response?.data?.error;
+        setErrorMessage(serverMsg || 'Registration failed. Please try again.');
+      }
     }
   };
 
@@ -122,17 +127,6 @@ export default function RegisterView({
               <span className={`theme-pill-option ${isDarkMode ? 'active' : ''}`}>
                 <i className="bi bi-moon-stars-fill text-primary"></i>
               </span>
-            </button>
-          )}
-
-          {onNavigateToDashboard && (
-            <button
-              onClick={onNavigateToDashboard}
-              className="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1.5"
-              style={{ color: 'var(--text-muted)', fontSize: '13px' }}
-            >
-              <span>Skip to Dashboard</span>
-              <i className="bi bi-arrow-right"></i>
             </button>
           )}
         </div>

@@ -2,11 +2,11 @@ services:
   # Spring Boot Java 21 Backend Web Service
   - type: web
     name: finwise-backend
-    runtime: java
+    runtime: docker
+    dockerfilePath: ./finwise/Dockerfile
+    dockerContext: ./finwise
     plan: free
     region: oregon
-    buildCommand: cd finwise && chmod +x ./mvnw && ./mvnw clean package -DskipTests
-    startCommand: java -jar finwise/target/finwise-0.0.1-SNAPSHOT.jar --server.port=$PORT
     envVars:
       - key: PORT
         value: 10000
@@ -19,12 +19,10 @@ services:
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
 
-  # React Single Page App (Static Site)
+  # React Single Page App (Global CDN Static Site)
   - type: web
     name: finintel-frontend
     runtime: static
-    plan: free
-    region: oregon
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     routes:
@@ -36,4 +34,3 @@ services:
         sync: false
       - key: REACT_APP_GEMINI_API_KEY
         sync: false
-

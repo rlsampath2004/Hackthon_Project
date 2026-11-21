@@ -13,11 +13,13 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: SPRING_DATASOURCE_URL
-        sync: false
+        value: jdbc:h2:mem:finwise_db;DB_CLOSE_DELAY=-1;MODE=MySQL
+      - key: SPRING_DATASOURCE_DRIVER
+        value: org.h2.Driver
       - key: SPRING_DATASOURCE_USERNAME
-        sync: false
+        value: sa
       - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
+        value: password
 
   # React Single Page App (Global CDN Static Site)
   - type: web

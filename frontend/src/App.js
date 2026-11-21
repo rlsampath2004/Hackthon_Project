@@ -122,6 +122,7 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isSetBudgetModalOpen, setIsSetBudgetModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(null);
 
   // Authenticated User State (Pristine clean default from localStorage or null)
   const [currentUser, setCurrentUser] = useState(() => {
@@ -307,16 +308,47 @@ export default function App() {
 
   const handleSaveBudget = async (newBudget) => {
     setBudgets((prev) => {
-      const existingIndex = prev.findIndex((b) => b.categoryName === newBudget.categoryName);
+      const existingIndex = prev.findIndex(
+        (b) => b.id === newBudget.id || b.categoryName === newBudget.categoryName
+      );
       if (existingIndex >= 0) {
         const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...newBudget };
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          ...newBudget,
+          actualSpent: updated[existingIndex].actualSpent ?? newBudget.actualSpent ?? 0,
+        };
         return updated;
       }
       return [...prev, newBudget];
     });
 
     await api.saveBudget(newBudget);
+  };
+
+  const handleDeleteBudget = async (id) => {
+    setBudgets((prev) => prev.filter((b) => b.id !== id));
+    await api.deleteBudget(id);
+  };
+
+  const handleQuickAdjustBudget = async (id, delta) => {
+    setBudgets((prev) =>
+      prev.map((b) => {
+        if (b.id === id) {
+          const newLimit = Math.max(10, Math.round((b.budgetLimit + delta) * 100) / 100);
+          const updated = { ...b, budgetLimit: newLimit };
+          api.saveBudget(updated);
+          return updated;
+        }
+        return b;
+      })
+    );
+  };
+
+  const handleClearAllBudgets = async () => {
+    const ids = budgets.map((b) => b.id);
+    setBudgets([]);
+    await Promise.all(ids.map((id) => api.deleteBudget(id)));
   };
 
   // AI 50/30/20 Optimizer
@@ -538,7 +570,17 @@ export default function App() {
         {activeNav === 'budgets' && (
           <BudgetsView
             budgets={budgets}
-            onOpenSetBudgetModal={() => setIsSetBudgetModalOpen(true)}
+            onOpenSetBudgetModal={() => {
+              setEditingBudget(null);
+              setIsSetBudgetModalOpen(true);
+            }}
+            onEditBudget={(budget) => {
+              setEditingBudget(budget);
+              setIsSetBudgetModalOpen(true);
+            }}
+            onDeleteBudget={handleDeleteBudget}
+            onQuickAdjust={handleQuickAdjustBudget}
+            onClearAllBudgets={handleClearAllBudgets}
             onApplyAiBudgetPlan={handleApplyAiBudgetPlan}
             isLoading={isLoading}
           />
@@ -611,8 +653,12 @@ export default function App() {
 
       <SetBudgetModal
         isOpen={isSetBudgetModalOpen}
-        onClose={() => setIsSetBudgetModalOpen(false)}
+        onClose={() => {
+          setIsSetBudgetModalOpen(false);
+          setEditingBudget(null);
+        }}
         onSaveBudget={handleSaveBudget}
+        editingBudget={editingBudget}
       />
     </div>
   );

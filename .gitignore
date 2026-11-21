@@ -15,10 +15,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment & local settings
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env*
+!.env.example
+frontend/.env
+frontend/.env*
+!frontend/.env.example
 
 # IDE & OS files
 .DS_Store

@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { aiApi } from '../api/axiosClient';
+import React, { useState, useEffect } from 'react';
+import { aiApi, api } from '../api/axiosClient';
+
+const DEFAULT_CATEGORIES = [
+  'Food & Dining',
+  'Groceries',
+  'Housing & Rent',
+  'Shopping & Retail',
+  'Transportation',
+  'Utilities & Wifi',
+  'Entertainment',
+  'Healthcare',
+  'Education',
+  'Consulting Income',
+  'Salary / Employment',
+  'Other Expense',
+];
 
 export default function AddTransactionModal({ 
   isOpen, 
@@ -7,6 +22,7 @@ export default function AddTransactionModal({
   onAddTransaction,
   accounts = []
 }) {
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
@@ -15,6 +31,17 @@ export default function AddTransactionModal({
     category: '',
     date: new Date().toISOString().split('T')[0],
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getCategories().then((cats) => {
+      if (isMounted && cats && cats.length > 0) {
+        const names = cats.map((c) => c.categoryName);
+        setCategories(Array.from(new Set([...names, ...DEFAULT_CATEGORIES])));
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const [aiPredicting, setAiPredicting] = useState(false);
   const [aiConfidence, setAiConfidence] = useState(null);
@@ -229,16 +256,11 @@ export default function AddTransactionModal({
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   >
                     <option value="">-- Select Category --</option>
-                    <option value="Food & Dining">Food & Dining</option>
-                    <option value="Groceries">Groceries</option>
-                    <option value="Housing & Rent">Housing & Rent</option>
-                    <option value="Shopping & Retail">Shopping & Retail</option>
-                    <option value="Transportation">Transportation</option>
-                    <option value="Utilities & Wifi">Utilities & Wifi</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Consulting Income">Consulting Income</option>
-                    <option value="Salary / Employment">Salary / Employment</option>
-                    <option value="Other Expense">Other Expense</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

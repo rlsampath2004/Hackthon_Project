@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.finwise.finwise.dto.LoginRequest;
 import com.finwise.finwise.dto.RegisterRequest;
 import com.finwise.finwise.entity.User;
+import com.finwise.finwise.repo.UserRepository;
 import com.finwise.finwise.service.AuthService;
 
 @RestController
@@ -18,10 +19,12 @@ import com.finwise.finwise.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
     // Constructor injection
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     // User Registration
@@ -41,14 +44,18 @@ public class AuthController {
 
     // User Login
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> loginUser(
+    public ResponseEntity<Map<String, Object>> loginUser(
             @RequestBody LoginRequest request) {
 
         String token = authService.loginUser(request);
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Login successful",
-                "token", token
+                "token", token,
+                "userId", user != null ? user.getUserId() : 1L,
+                "fullName", user != null ? user.getFullName() : request.getEmail().split("@")[0],
+                "email", request.getEmail()
         ));
     }
 }

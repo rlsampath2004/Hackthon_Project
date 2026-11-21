@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StatCardSkeleton } from './SkeletonLoader';
-import { aiApi } from '../api/axiosClient';
+import { aiApi, api } from '../api/axiosClient';
 
 export default function AIIntelligenceView({ 
   transactions = [], 
@@ -11,6 +11,52 @@ export default function AIIntelligenceView({
   const [sandboxMemo, setSandboxMemo] = useState('');
   const [sandboxResult, setSandboxResult] = useState(null);
   const [sandboxLoading, setSandboxLoading] = useState(false);
+
+  // Google Gemini AI Advisor Chat State
+  const [chatQuery, setChatQuery] = useState('');
+  const [chatHistory, setChatHistory] = useState([
+    {
+      sender: 'gemini',
+      text: 'Hello! I am your Google Gemini Financial Copilot. Ask me anything about budgeting, savings velocity, reducing expenses, or wealth optimization!',
+      time: 'Just now',
+      engine: 'Google Gemini AI',
+    },
+  ]);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleAskGemini = async (e) => {
+    e.preventDefault();
+    if (!chatQuery.trim() || chatLoading) return;
+    const userPrompt = chatQuery.trim();
+    setChatQuery('');
+    setChatHistory((prev) => [...prev, { sender: 'user', text: userPrompt, time: 'Just now' }]);
+    setChatLoading(true);
+
+    try {
+      const res = await api.chatWithGemini(userPrompt);
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          sender: 'gemini',
+          text: res.reply || 'Here is your personalized financial guidance.',
+          time: 'Just now',
+          engine: res.engine || 'Google Gemini AI',
+        },
+      ]);
+    } catch (err) {
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          sender: 'gemini',
+          text: 'Maintain an emergency fund covering 3-6 months of expenses, allocate 50% to essentials, 30% to lifestyle, and 20% to savings and investment.',
+          time: 'Just now',
+          engine: 'Google Gemini AI Fallback',
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   // Mandatory AI Feature 1: Live Expense Categorization Sandbox via Axios
   const handleTestSandbox = async (e) => {
@@ -361,6 +407,100 @@ export default function AIIntelligenceView({
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Section 4: Live Google Gemini Financial Copilot */}
+          <div className="custom-card p-4" data-aos="fade-up" data-aos-delay="400">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 className="fw-bold mb-0 d-flex align-items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                  <i className="bi bi-robot text-primary"></i>
+                  Google Gemini AI Financial Copilot
+                </h5>
+                <span className="small" style={{ color: 'var(--text-muted)' }}>
+                  Powered by Google Gemini 1.5 Flash LLM intelligence for conversational wealth advice
+                </span>
+              </div>
+              <span className="badge bg-success-subtle text-success border border-success border-opacity-25 px-2.5 py-1.5 small">
+                <i className="bi bi-patch-check-fill me-1"></i> Gemini API Connected
+              </span>
+            </div>
+
+            {/* Chat Messages */}
+            <div
+              className="p-3 rounded-2 mb-3 space-y-2.5"
+              style={{
+                backgroundColor: 'var(--surface-elevated)',
+                border: '1px solid var(--card-border)',
+                maxHeight: '260px',
+                overflowY: 'auto',
+              }}
+            >
+              {chatHistory.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`d-flex ${msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`}
+                >
+                  <div
+                    className="p-2.5 rounded-3"
+                    style={{
+                      maxWidth: '82%',
+                      backgroundColor: msg.sender === 'user' ? 'var(--accent-primary)' : 'var(--surface-card)',
+                      color: msg.sender === 'user' ? '#fff' : 'var(--text-main)',
+                      border: '1px solid var(--card-border)',
+                      fontSize: '13px',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                      <span className="fw-bold small" style={{ fontSize: '11px', opacity: 0.85 }}>
+                        {msg.sender === 'user' ? 'You' : 'Google Gemini AI'}
+                      </span>
+                      {msg.engine && (
+                        <span className="badge bg-primary text-white" style={{ fontSize: '9px', padding: '2px 5px' }}>
+                          {msg.engine}
+                        </span>
+                      )}
+                    </div>
+                    <div>{msg.text}</div>
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="d-flex justify-content-start">
+                  <div
+                    className="p-2.5 rounded-3 small text-muted d-flex align-items-center gap-2"
+                    style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--card-border)' }}
+                  >
+                    <i className="bi bi-arrow-repeat spin-anim text-primary"></i>
+                    <span>Gemini is generating wealth advice...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Prompt Input Form */}
+            <form onSubmit={handleAskGemini} className="row g-2">
+              <div className="col-12 col-md-9">
+                <input
+                  type="text"
+                  className="form-control-pro w-100"
+                  placeholder="Ask Gemini: 'How should I allocate a $1,500 bonus?' or 'Tips to lower high utility bills'..."
+                  value={chatQuery}
+                  onChange={(e) => setChatQuery(e.target.value)}
+                />
+              </div>
+              <div className="col-12 col-md-3">
+                <button
+                  type="submit"
+                  disabled={chatLoading || !chatQuery.trim()}
+                  className="btn btn-primary w-100 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                >
+                  <i className="bi bi-send-fill"></i>
+                  <span>Ask Gemini</span>
+                </button>
+              </div>
+            </form>
           </div>
         </>
       )}

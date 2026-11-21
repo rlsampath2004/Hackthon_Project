@@ -11,6 +11,7 @@ export default function RegisterView({
 }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -50,6 +51,10 @@ export default function RegisterView({
       setErrorMessage('Please enter a valid email address.');
       return;
     }
+    if (!phone.trim()) {
+      setErrorMessage('Please enter your contact phone number.');
+      return;
+    }
     if (password.length < 6) {
       setErrorMessage('Password must be at least 6 characters long.');
       return;
@@ -69,6 +74,7 @@ export default function RegisterView({
       const user = await authApi.register({
         name: fullName.trim(),
         email: email.trim(),
+        phone: phone.trim(),
         password: password,
         currency: currency
       });
@@ -232,6 +238,30 @@ export default function RegisterView({
                 style={{ paddingLeft: '44px', height: '44px', fontSize: '13.5px' }}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Phone Number */}
+          <div className="mb-3">
+            <label className="form-label small fw-semibold mb-1" style={{ color: 'var(--text-main)' }}>
+              Phone Number
+            </label>
+            <div className="position-relative">
+              <div
+                className="position-absolute start-0 top-50 translate-middle-y d-flex align-items-center justify-content-center"
+                style={{ width: '44px', height: '100%', pointerEvents: 'none', color: 'var(--text-muted)' }}
+              >
+                <i className="bi bi-telephone fs-6"></i>
+              </div>
+              <input
+                type="tel"
+                required
+                placeholder="e.g. +1 (555) 019-2834"
+                className="form-control-pro w-100"
+                style={{ paddingLeft: '44px', height: '44px', fontSize: '13.5px' }}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
           </div>

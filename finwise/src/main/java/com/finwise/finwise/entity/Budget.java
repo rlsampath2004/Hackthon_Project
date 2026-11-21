@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.AllArgsConstructor;
 @Entity
 @Table(name = "budgets", uniqueConstraints = {
 		@UniqueConstraint(columnNames = { "user_id", "category_id", "budget_month" }) })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,6 +36,9 @@ public class Budget {
 	@Column(precision = 12, scale = 2, nullable = false)
 	private BigDecimal monthlyLimit;
 
+	@Column(precision = 5, scale = 2)
+	private BigDecimal alertThreshold = BigDecimal.valueOf(0.80);
+
 	private LocalDate budgetMonth;
 
 	private LocalDateTime createdAt;
@@ -41,6 +46,9 @@ public class Budget {
 	@PrePersist
 	public void onCreate() {
 		createdAt = LocalDateTime.now();
+		if (alertThreshold == null) {
+			alertThreshold = BigDecimal.valueOf(0.80);
+		}
 	}
 
 	public Long getBudgetId() {
@@ -73,6 +81,14 @@ public class Budget {
 
 	public void setMonthlyLimit(BigDecimal monthlyLimit) {
 		this.monthlyLimit = monthlyLimit;
+	}
+
+	public BigDecimal getAlertThreshold() {
+		return alertThreshold != null ? alertThreshold : BigDecimal.valueOf(0.80);
+	}
+
+	public void setAlertThreshold(BigDecimal alertThreshold) {
+		this.alertThreshold = alertThreshold;
 	}
 
 	public LocalDate getBudgetMonth() {

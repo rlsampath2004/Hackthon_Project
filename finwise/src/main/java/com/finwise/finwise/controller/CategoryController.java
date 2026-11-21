@@ -10,6 +10,7 @@ import com.finwise.finwise.service.CategoryService;
 
 @RestController
 @RequestMapping("/api/categories")
+@CrossOrigin(origins = "*")
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -17,6 +18,13 @@ public class CategoryController {
     // Constructor injection
     public CategoryController(CategoryService categoryService) {
         this.categoryService = categoryService;
+    }
+
+    // Get All Categories
+    @GetMapping
+    public ResponseEntity<List<Category>> getAllCategories() {
+        List<Category> categories = categoryService.getAllCategories();
+        return ResponseEntity.ok(categories);
     }
 
     // Create Category

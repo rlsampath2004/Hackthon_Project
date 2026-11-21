@@ -8,6 +8,8 @@ public interface CategoryService {
 
     Category createCategory(Category category);
 
+    List<Category> getAllCategories();
+
     List<Category> getAllCategoriesByUser(Long userId);
 
     List<Category> getCategoriesByType(Long userId, String categoryType);

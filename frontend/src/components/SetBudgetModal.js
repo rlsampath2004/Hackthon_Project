@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api/axiosClient';
 
 const STANDARD_CATEGORIES = [
   'Food & Dining',
@@ -15,11 +16,23 @@ const STANDARD_CATEGORIES = [
 ];
 
 export default function SetBudgetModal({ isOpen, onClose, onSaveBudget, editingBudget }) {
+  const [categories, setCategories] = useState(STANDARD_CATEGORIES);
   const [formData, setFormData] = useState({
     categoryName: '',
     budgetLimit: '',
     alertThreshold: 0.8, // 80%
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getCategories().then((cats) => {
+      if (isMounted && cats && cats.length > 0) {
+        const names = cats.map((c) => c.categoryName);
+        setCategories(Array.from(new Set([...names, ...STANDARD_CATEGORIES])));
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     if (editingBudget) {
@@ -61,9 +74,9 @@ export default function SetBudgetModal({ isOpen, onClose, onSaveBudget, editingB
   const isEditing = Boolean(editingBudget);
 
   // Ensure editing category exists in select options
-  const categoryOptions = isEditing && !STANDARD_CATEGORIES.includes(formData.categoryName)
-    ? [formData.categoryName, ...STANDARD_CATEGORIES]
-    : STANDARD_CATEGORIES;
+  const categoryOptions = isEditing && !categories.includes(formData.categoryName)
+    ? [formData.categoryName, ...categories]
+    : categories;
 
   return (
     <div

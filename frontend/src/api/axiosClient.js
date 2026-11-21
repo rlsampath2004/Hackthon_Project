@@ -83,22 +83,49 @@ export const accountsApi = {
   },
 };
 
+// --- Categories API ---
+export const categoriesApi = {
+  getAll: async () => {
+    try {
+      const res = await apiClient.get('/categories');
+      if (Array.isArray(res) && res.length > 0) {
+        return res.map((c) => ({
+          id: c.categoryId || c.id,
+          categoryName: c.categoryName,
+          categoryType: c.categoryType || 'EXPENSE',
+          isDefault: Boolean(c.isDefault),
+        }));
+      }
+      return null;
+    } catch (err) {
+      console.warn('Categories API unavailable.');
+      return null;
+    }
+  },
+};
+
 // --- Transactions API ---
 export const transactionsApi = {
   getAll: async (params = {}) => {
     try {
       const res = await apiClient.get('/transactions', { params });
       if (Array.isArray(res) && res.length > 0) {
-        return res.map((t) => ({
-          id: t.transactionId || t.id,
-          merchant: t.description || 'Transaction',
-          category: t.category ? t.category.categoryName : 'Shopping & Retail',
-          account: t.account ? t.account.accountName : 'Primary Account',
-          date: t.transactionDate || new Date().toISOString().split('T')[0],
-          amount: parseFloat(t.amount || 0),
-          isAiTagged: true,
-          icon: 'bi-receipt',
-        }));
+        return res.map((t) => {
+          const rawAmount = parseFloat(t.amount || 0);
+          const isExpense = t.transactionType === 'EXPENSE' || (!t.transactionType && rawAmount < 0);
+          const finalAmount = isExpense ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+
+          return {
+            id: t.transactionId || t.id,
+            merchant: t.description || 'Transaction',
+            category: t.category ? t.category.categoryName : 'Shopping & Retail',
+            account: t.account ? t.account.accountName : 'Chase Premier Checking',
+            date: t.transactionDate || new Date().toISOString().split('T')[0],
+            amount: finalAmount,
+            isAiTagged: true,
+            icon: isExpense ? 'bi-receipt' : 'bi-briefcase-fill',
+          };
+        });
       }
       return null;
     } catch (err) {
@@ -108,11 +135,16 @@ export const transactionsApi = {
   },
   create: async (txData) => {
     try {
+      const rawAmt = parseFloat(txData.amount || 0);
+      const isIncome = rawAmt > 0 || txData.type === 'INCOME';
       return await apiClient.post('/transactions', {
         description: txData.merchant || txData.description,
-        amount: txData.amount,
-        transactionType: txData.amount > 0 ? 'INCOME' : 'EXPENSE',
+        amount: Math.abs(rawAmt),
+        transactionType: isIncome ? 'INCOME' : 'EXPENSE',
         paymentMethod: 'ONLINE',
+        category: { categoryName: txData.category || 'Shopping & Retail' },
+        account: { accountName: txData.account || 'Primary Checking' },
+        transactionDate: txData.date || new Date().toISOString().split('T')[0],
       });
     } catch (err) {
       return txData;
@@ -138,7 +170,7 @@ export const budgetsApi = {
           categoryName: b.category ? b.category.categoryName : (b.categoryName || 'General'),
           budgetLimit: parseFloat(b.monthlyLimit || b.budgetLimit || 0),
           actualSpent: 0,
-          alertThreshold: 0.8,
+          alertThreshold: parseFloat(b.alertThreshold || 0.8),
         }));
       }
       return null;
@@ -150,7 +182,10 @@ export const budgetsApi = {
   save: async (budgetData) => {
     try {
       return await apiClient.post('/budgets', {
+        id: budgetData.id,
+        category: { categoryName: budgetData.categoryName },
         monthlyLimit: budgetData.budgetLimit,
+        alertThreshold: budgetData.alertThreshold || 0.8,
         budgetMonth: '2026-11-01',
       });
     } catch (err) {
@@ -173,9 +208,9 @@ export const authApi = {
       const res = await apiClient.post('/auth/login', { email, password });
       const token = res.token || (typeof res === 'string' ? res : 'jwt-finintel-' + Date.now());
       return {
-        id: 1,
-        name: email.split('@')[0],
-        email: email,
+        id: res.userId || 1,
+        name: res.fullName || email.split('@')[0],
+        email: res.email || email,
         currency: 'USD',
         role: 'ROLE_USER',
         token: token,
@@ -208,6 +243,7 @@ export const authApi = {
         id: res.userId || Date.now(),
         name: res.fullName || userData.name || userData.fullName,
         email: res.email || userData.email,
+        phone: res.phone || userData.phone,
         currency: userData.currency || 'USD',
         role: 'ROLE_USER',
         token: 'jwt-auth-' + Math.random().toString(36).substring(2),
@@ -217,6 +253,7 @@ export const authApi = {
         id: Date.now(),
         name: userData.fullName || userData.name,
         email: userData.email,
+        phone: userData.phone || '',
         currency: userData.currency || 'USD',
         role: 'ROLE_USER',
         token: 'jwt-auth-' + Math.random().toString(36).substring(2),
@@ -262,6 +299,16 @@ export const aiApi = {
       };
     }
   },
+  chatWithGemini: async (query) => {
+    try {
+      return await apiClient.post('/ai/chat', { query });
+    } catch (err) {
+      return {
+        reply: 'Follow the 50/30/20 guideline: 50% for necessities, 30% for discretionary goals, and 20% for emergency reserves and investments.',
+        engine: 'Gemini AI Fallback',
+      };
+    }
+  },
 };
 
 // Unified export
@@ -275,10 +322,12 @@ export const api = {
   getBudgets: budgetsApi.getAll,
   saveBudget: budgetsApi.save,
   deleteBudget: budgetsApi.delete,
+  getCategories: categoriesApi.getAll,
   login: authApi.login,
   register: authApi.register,
   predictCategory: aiApi.categorize,
   get503020Recommendations: aiApi.get503020Recommendations,
+  chatWithGemini: aiApi.chatWithGemini,
 };
 
 export default apiClient;

@@ -266,7 +266,12 @@ export default function App() {
     );
 
     // Persist via Axios client
-    await api.createTransaction(newTx);
+    const saved = await api.createTransaction(newTx);
+    if (saved && (saved.transactionId || saved.id)) {
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === newTx.id ? { ...t, id: saved.transactionId || saved.id } : t))
+      );
+    }
   };
 
   const handleDeleteTransaction = async (id) => {
@@ -303,7 +308,12 @@ export default function App() {
 
   const handleAddAccount = async (newAccount) => {
     setAccounts((prev) => [...prev, newAccount]);
-    await api.createAccount(newAccount);
+    const saved = await api.createAccount(newAccount);
+    if (saved && (saved.accountId || saved.id)) {
+      setAccounts((prev) =>
+        prev.map((a) => (a.accountName === newAccount.accountName ? { ...a, id: saved.accountId || saved.id } : a))
+      );
+    }
   };
 
   const handleSaveBudget = async (newBudget) => {
@@ -323,7 +333,12 @@ export default function App() {
       return [...prev, newBudget];
     });
 
-    await api.saveBudget(newBudget);
+    const saved = await api.saveBudget(newBudget);
+    if (saved && (saved.budgetId || saved.id)) {
+      setBudgets((prev) =>
+        prev.map((b) => (b.categoryName === newBudget.categoryName ? { ...b, id: saved.budgetId || saved.id } : b))
+      );
+    }
   };
 
   const handleDeleteBudget = async (id) => {

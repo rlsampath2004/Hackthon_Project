@@ -65,6 +65,21 @@ public class BudgetServiceImpl implements BudgetService {
         if (budget.getBudgetMonth() == null) {
             budget.setBudgetMonth(LocalDate.now().withDayOfMonth(1));
         }
+        if (budget.getAlertThreshold() == null) {
+            budget.setAlertThreshold(java.math.BigDecimal.valueOf(0.80));
+        }
+
+        // Upsert if budget for user and category already exists
+        List<Budget> existingList = budgetRepository.findByUser_UserIdAndCategory_CategoryId(
+                budget.getUser().getUserId(), budget.getCategory().getCategoryId());
+        for (Budget b : existingList) {
+            if (b.getBudgetMonth() != null && b.getBudgetMonth().equals(budget.getBudgetMonth())) {
+                b.setMonthlyLimit(budget.getMonthlyLimit());
+                b.setAlertThreshold(budget.getAlertThreshold());
+                return budgetRepository.save(b);
+            }
+        }
+
         return budgetRepository.save(budget);
     }
 
@@ -93,6 +108,9 @@ public class BudgetServiceImpl implements BudgetService {
         }
         if (updatedBudget.getCategory() != null) {
             existingBudget.setCategory(updatedBudget.getCategory());
+        }
+        if (updatedBudget.getAlertThreshold() != null) {
+            existingBudget.setAlertThreshold(updatedBudget.getAlertThreshold());
         }
         return budgetRepository.save(existingBudget);
     }

@@ -6,28 +6,72 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.finwise.finwise.entity.Budget;
+import com.finwise.finwise.entity.Category;
+import com.finwise.finwise.entity.User;
 import com.finwise.finwise.repo.BudgetRepository;
-import com.finwise.finwise.service.BudgetService;
+import com.finwise.finwise.repo.CategoryRepository;
+import com.finwise.finwise.repo.UserRepository;
 
 @Service
 public class BudgetServiceImpl implements BudgetService {
 
     private final BudgetRepository budgetRepository;
+    private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
 
-    public BudgetServiceImpl(BudgetRepository budgetRepository) {
+    public BudgetServiceImpl(
+            BudgetRepository budgetRepository,
+            UserRepository userRepository,
+            CategoryRepository categoryRepository) {
         this.budgetRepository = budgetRepository;
+        this.userRepository = userRepository;
+        this.categoryRepository = categoryRepository;
+    }
+
+    private User resolveDefaultUser() {
+        return userRepository.findAll().stream().findFirst().orElseGet(() -> {
+            User demo = new User();
+            demo.setFullName("Alex Vance");
+            demo.setEmail("demo@finintel.ai");
+            demo.setPassword("$2a$10$wS8B/9C/7Yh2tL9D1rLg3.Oa8E8p8m4u4s6u8w0w2w4w6w8w0w2w4");
+            return userRepository.save(demo);
+        });
+    }
+
+    private Category resolveDefaultCategory(User user, String categoryName) {
+        String targetName = (categoryName != null && !categoryName.isBlank()) ? categoryName : "Food & Dining";
+        return categoryRepository.findAll().stream()
+                .filter(c -> c.getCategoryName() != null && c.getCategoryName().equalsIgnoreCase(targetName))
+                .findFirst()
+                .orElseGet(() -> {
+                    Category cat = new Category();
+                    cat.setUser(user);
+                    cat.setCategoryName(targetName);
+                    cat.setCategoryType("EXPENSE");
+                    cat.setIsDefault(true);
+                    return categoryRepository.save(cat);
+                });
     }
 
     @Override
     public Budget createBudget(Budget budget) {
+        if (budget.getUser() == null || budget.getUser().getUserId() == null) {
+            budget.setUser(resolveDefaultUser());
+        }
+        if (budget.getCategory() == null || budget.getCategory().getCategoryId() == null) {
+            String catName = budget.getCategory() != null ? budget.getCategory().getCategoryName() : null;
+            budget.setCategory(resolveDefaultCategory(budget.getUser(), catName));
+        }
+        if (budget.getBudgetMonth() == null) {
+            budget.setBudgetMonth(LocalDate.now().withDayOfMonth(1));
+        }
         return budgetRepository.save(budget);
     }
 
     @Override
     public Budget getBudgetById(Long budgetId) {
         return budgetRepository.findById(budgetId)
-                .orElseThrow(() ->
-                    new RuntimeException("Budget not found with ID: " + budgetId));
+                .orElseThrow(() -> new RuntimeException("Budget not found with ID: " + budgetId));
     }
 
     @Override
@@ -36,22 +80,20 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     @Override
-    public List<Budget> getBudgetsByMonth(
-            Long userId, LocalDate budgetMonth) {
-
-        return budgetRepository
-                .findByUser_UserIdAndBudgetMonth(userId, budgetMonth);
+    public List<Budget> getBudgetsByMonth(Long userId, LocalDate budgetMonth) {
+        return budgetRepository.findByUser_UserIdAndBudgetMonth(userId, budgetMonth);
     }
 
     @Override
     public Budget updateBudget(Long budgetId, Budget updatedBudget) {
-
         Budget existingBudget = getBudgetById(budgetId);
-
         existingBudget.setMonthlyLimit(updatedBudget.getMonthlyLimit());
-        existingBudget.setBudgetMonth(updatedBudget.getBudgetMonth());
-        existingBudget.setCategory(updatedBudget.getCategory());
-
+        if (updatedBudget.getBudgetMonth() != null) {
+            existingBudget.setBudgetMonth(updatedBudget.getBudgetMonth());
+        }
+        if (updatedBudget.getCategory() != null) {
+            existingBudget.setCategory(updatedBudget.getCategory());
+        }
         return budgetRepository.save(existingBudget);
     }
 

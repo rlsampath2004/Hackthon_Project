@@ -11,8 +11,8 @@ import AiInsightsCard from './components/AiInsightsCard';
 import AddTransactionModal from './components/AddTransactionModal';
 import AddAccountModal from './components/AddAccountModal';
 import SetBudgetModal from './components/SetBudgetModal';
-import AuthModal from './components/AuthModal';
 import LoginView from './components/LoginView';
+import RegisterView from './components/RegisterView';
 import IntroView from './components/IntroView';
 import TransactionsView from './components/TransactionsView';
 import AccountsView from './components/AccountsView';
@@ -122,7 +122,6 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isSetBudgetModalOpen, setIsSetBudgetModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Authenticated User State (Pristine clean default from localStorage or null)
   const [currentUser, setCurrentUser] = useState(() => {
@@ -363,7 +362,6 @@ export default function App() {
         toggleTheme={toggleTheme}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         currentUser={currentUser}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onSignOut={() => {
           setCurrentUser(null);
           localStorage.removeItem('finintel_user');
@@ -562,13 +560,27 @@ export default function App() {
           />
         )}
 
-        {/* Dedicated Full-Page Login & Registration View */}
+        {/* Dedicated Full-Page Login View */}
         {activeNav === 'login' && (
           <LoginView
             onAuthSuccess={(user) => {
               setCurrentUser(user);
               handleNavigate('dashboard');
             }}
+            onNavigateToRegister={() => handleNavigate('register')}
+            onNavigateToDashboard={() => handleNavigate('dashboard')}
+            onNavigateToIntro={() => handleNavigate('intro')}
+          />
+        )}
+
+        {/* Dedicated Full-Page Registration View */}
+        {activeNav === 'register' && (
+          <RegisterView
+            onAuthSuccess={(user) => {
+              setCurrentUser(user);
+              handleNavigate('dashboard');
+            }}
+            onNavigateToLogin={() => handleNavigate('login')}
             onNavigateToDashboard={() => handleNavigate('dashboard')}
             onNavigateToIntro={() => handleNavigate('intro')}
           />
@@ -593,13 +605,6 @@ export default function App() {
         isOpen={isSetBudgetModalOpen}
         onClose={() => setIsSetBudgetModalOpen(false)}
         onSaveBudget={handleSaveBudget}
-      />
-
-      {/* Authentication & User Registration Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onAuthSuccess={(user) => setCurrentUser(user)}
       />
     </div>
   );

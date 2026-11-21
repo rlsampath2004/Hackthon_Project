@@ -7,7 +7,6 @@ export default function Navbar({
   toggleTheme, 
   onOpenAddModal,
   currentUser,
-  onOpenAuthModal,
   onSignOut
 }) {
   const navItems = [
@@ -115,7 +114,7 @@ export default function Navbar({
               <span>Add Entry</span>
             </button>
 
-            {/* Interactive User Auth Status / Sign In Control */}
+            {/* Interactive User Auth Status / Sign In & Register Controls */}
             {currentUser ? (
               <div className="d-flex align-items-center gap-2">
                 <div
@@ -137,14 +136,28 @@ export default function Navbar({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={onOpenAuthModal}
-                className="btn btn-sm btn-outline-primary py-1.5 px-3 fw-semibold d-flex align-items-center gap-1.5"
-                type="button"
-              >
-                <i className="bi bi-person-fill"></i>
-                <span>Sign In</span>
-              </button>
+              <div className="d-flex align-items-center gap-1.5">
+                <button
+                  onClick={() => setActiveNav('login')}
+                  className={`btn btn-sm py-1.5 px-2.5 fw-semibold d-flex align-items-center gap-1 ${
+                    activeNav === 'login' ? 'btn-primary' : 'btn-outline-primary'
+                  }`}
+                  type="button"
+                >
+                  <i className="bi bi-box-arrow-in-right"></i>
+                  <span>Sign In</span>
+                </button>
+                <button
+                  onClick={() => setActiveNav('register')}
+                  className={`btn btn-sm py-1.5 px-2.5 fw-semibold d-flex align-items-center gap-1 ${
+                    activeNav === 'register' ? 'btn-primary' : 'btn-outline-secondary'
+                  }`}
+                  type="button"
+                >
+                  <i className="bi bi-person-plus-fill"></i>
+                  <span>Register</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

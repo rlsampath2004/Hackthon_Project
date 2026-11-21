@@ -534,7 +534,11 @@ export default function App() {
             {/* Row 3: Recent Activity & AI Insights */}
             <div className="row g-3 g-xl-4">
               <div className="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="200">
-                <RecentTransactions transactions={transactions} isLoading={isLoading} />
+                <RecentTransactions 
+                  transactions={transactions} 
+                  isLoading={isLoading} 
+                  onViewAll={() => handleNavigate('transactions')}
+                />
               </div>
               <div className="col-12 col-lg-4" data-aos="fade-up" data-aos-delay="300">
                 <AiInsightsCard 

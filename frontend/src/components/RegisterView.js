@@ -79,13 +79,13 @@ export default function RegisterView({
         currency: currency
       });
 
+      localStorage.setItem('finintel_user', JSON.stringify(user));
+      localStorage.setItem('finintel_token', user.token);
       setSuccessMessage('Account created successfully! Preparing dashboard...');
       setTimeout(() => {
-        localStorage.setItem('finintel_user', JSON.stringify(user));
-        localStorage.setItem('finintel_token', user.token);
         setIsLoading(false);
         if (onAuthSuccess) onAuthSuccess(user);
-      }, 500);
+      }, 200);
     } catch (err) {
       setIsLoading(false);
       if (!err.response) {

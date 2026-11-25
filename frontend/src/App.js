@@ -204,9 +204,15 @@ export default function App() {
   };
 
   // Smooth Tab Switcher with Strict Authentication Guard
-  const handleNavigate = (navId) => {
+  const handleNavigate = (navId, userOverride) => {
+    let effectiveUser;
+    if (userOverride !== undefined) {
+      effectiveUser = userOverride;
+    } else {
+      effectiveUser = currentUser || (localStorage.getItem('finintel_user') ? JSON.parse(localStorage.getItem('finintel_user')) : null);
+    }
     const isPublicNav = navId === 'login' || navId === 'register' || navId === 'intro';
-    if (!currentUser && !isPublicNav) {
+    if (!effectiveUser && !isPublicNav) {
       setActiveNav('login');
       return;
     }
@@ -418,10 +424,10 @@ export default function App() {
           onOpenAddModal={() => setIsAddModalOpen(true)}
           currentUser={currentUser}
           onSignOut={() => {
-            setCurrentUser(null);
             localStorage.removeItem('finintel_user');
             localStorage.removeItem('finintel_token');
-            handleNavigate('login');
+            setCurrentUser(null);
+            handleNavigate('login', null);
           }}
         />
       )}
@@ -635,7 +641,7 @@ export default function App() {
           <LoginView
             onAuthSuccess={(user) => {
               setCurrentUser(user);
-              handleNavigate('dashboard');
+              handleNavigate('dashboard', user);
             }}
             onNavigateToRegister={() => handleNavigate('register')}
             onNavigateToIntro={() => handleNavigate('intro')}
@@ -649,7 +655,7 @@ export default function App() {
           <RegisterView
             onAuthSuccess={(user) => {
               setCurrentUser(user);
-              handleNavigate('dashboard');
+              handleNavigate('dashboard', user);
             }}
             onNavigateToLogin={() => handleNavigate('login')}
             onNavigateToIntro={() => handleNavigate('intro')}

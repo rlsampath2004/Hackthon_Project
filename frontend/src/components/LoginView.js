@@ -38,13 +38,13 @@ export default function LoginView({
 
     try {
       const user = await authApi.login(email.trim(), password);
+      localStorage.setItem('finintel_user', JSON.stringify(user));
+      localStorage.setItem('finintel_token', user.token);
       setSuccessMessage('Signing in...');
       setTimeout(() => {
-        localStorage.setItem('finintel_user', JSON.stringify(user));
-        localStorage.setItem('finintel_token', user.token);
         setIsLoading(false);
         if (onAuthSuccess) onAuthSuccess(user);
-      }, 450);
+      }, 200);
     } catch (err) {
       setIsLoading(false);
       if (!err.response) {

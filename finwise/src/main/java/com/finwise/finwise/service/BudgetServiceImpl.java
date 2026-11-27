@@ -57,6 +57,10 @@ public class BudgetServiceImpl implements BudgetService {
     public Budget createBudget(Budget budget) {
         if (budget.getUser() == null || budget.getUser().getUserId() == null) {
             budget.setUser(resolveDefaultUser());
+        } else {
+            User u = userRepository.findById(budget.getUser().getUserId())
+                    .orElseGet(this::resolveDefaultUser);
+            budget.setUser(u);
         }
         if (budget.getCategory() == null || budget.getCategory().getCategoryId() == null) {
             String catName = budget.getCategory() != null ? budget.getCategory().getCategoryName() : null;

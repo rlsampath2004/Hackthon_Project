@@ -34,6 +34,10 @@ public class AccountServiceImpl implements AccountService {
     public Account createAccount(Account account) {
         if (account.getUser() == null || account.getUser().getUserId() == null) {
             account.setUser(resolveDefaultUser());
+        } else {
+            User u = userRepository.findById(account.getUser().getUserId())
+                    .orElseGet(this::resolveDefaultUser);
+            account.setUser(u);
         }
         return accountRepository.save(account);
     }

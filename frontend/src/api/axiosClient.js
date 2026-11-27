@@ -43,32 +43,48 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Helper to get active user ID from local session
+const getActiveUserId = () => {
+  try {
+    const saved = localStorage.getItem('finintel_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      return u.id || u.userId || null;
+    }
+  } catch (e) {}
+  return null;
+};
+
 // --- Accounts API ---
 export const accountsApi = {
-  getAll: async () => {
+  getAll: async (userId) => {
     try {
-      const res = await apiClient.get('/accounts');
-      if (Array.isArray(res) && res.length > 0) {
+      const targetUserId = userId || getActiveUserId();
+      const params = targetUserId ? { userId: targetUserId } : {};
+      const res = await apiClient.get('/accounts', { params });
+      if (Array.isArray(res)) {
         return res.map((a) => ({
           id: a.accountId || a.id,
           accountName: a.accountName,
           accountType: a.accountType || 'BANK',
-          balance: parseFloat(a.openingBalance || a.balance || 0),
+          balance: parseFloat(a.openingBalance !== undefined ? a.openingBalance : (a.balance || 0)),
           accountNumber: '•••• ' + String(a.accountId || a.id || '1001').padStart(4, '0'),
         }));
       }
-      return null;
+      return [];
     } catch (err) {
       console.warn('Accounts API unavailable. Using state store.');
-      return null;
+      return [];
     }
   },
   create: async (accountData) => {
     try {
+      const targetUserId = accountData.userId || getActiveUserId();
       return await apiClient.post('/accounts', {
         accountName: accountData.accountName,
         accountType: accountData.accountType,
         openingBalance: accountData.balance,
+        user: targetUserId ? { userId: targetUserId } : null,
       });
     } catch (err) {
       return accountData;
@@ -96,10 +112,10 @@ export const categoriesApi = {
           isDefault: Boolean(c.isDefault),
         }));
       }
-      return null;
+      return [];
     } catch (err) {
       console.warn('Categories API unavailable.');
-      return null;
+      return [];
     }
   },
 };
@@ -108,8 +124,13 @@ export const categoriesApi = {
 export const transactionsApi = {
   getAll: async (params = {}) => {
     try {
-      const res = await apiClient.get('/transactions', { params });
-      if (Array.isArray(res) && res.length > 0) {
+      const effectiveParams = { ...params };
+      if (!effectiveParams.userId) {
+        const uid = getActiveUserId();
+        if (uid) effectiveParams.userId = uid;
+      }
+      const res = await apiClient.get('/transactions', { params: effectiveParams });
+      if (Array.isArray(res)) {
         return res.map((t) => {
           const rawAmount = parseFloat(t.amount || 0);
           const isExpense = t.transactionType === 'EXPENSE' || (!t.transactionType && rawAmount < 0);
@@ -118,8 +139,8 @@ export const transactionsApi = {
           return {
             id: t.transactionId || t.id,
             merchant: t.description || 'Transaction',
-            category: t.category ? t.category.categoryName : 'Shopping & Retail',
-            account: t.account ? t.account.accountName : 'Chase Premier Checking',
+            category: t.category ? (t.category.categoryName || t.category) : 'Shopping & Retail',
+            account: t.account ? (t.account.accountName || t.account) : 'Primary Checking',
             date: t.transactionDate || new Date().toISOString().split('T')[0],
             amount: finalAmount,
             isAiTagged: true,
@@ -127,14 +148,15 @@ export const transactionsApi = {
           };
         });
       }
-      return null;
+      return [];
     } catch (err) {
       console.warn('Transactions API unavailable. Using state store.');
-      return null;
+      return [];
     }
   },
   create: async (txData) => {
     try {
+      const targetUserId = txData.userId || getActiveUserId();
       const rawAmt = parseFloat(txData.amount || 0);
       const isIncome = rawAmt > 0 || txData.type === 'INCOME';
       return await apiClient.post('/transactions', {
@@ -145,6 +167,7 @@ export const transactionsApi = {
         category: { categoryName: txData.category || 'Shopping & Retail' },
         account: { accountName: txData.account || 'Primary Checking' },
         transactionDate: txData.date || new Date().toISOString().split('T')[0],
+        user: targetUserId ? { userId: targetUserId } : null,
       });
     } catch (err) {
       return txData;
@@ -161,32 +184,39 @@ export const transactionsApi = {
 
 // --- Budgets API ---
 export const budgetsApi = {
-  getAll: async (monthYear = '2026-11') => {
+  getAll: async (params = {}) => {
     try {
-      const res = await apiClient.get('/budgets', { params: { monthYear } });
-      if (Array.isArray(res) && res.length > 0) {
+      const effectiveParams = typeof params === 'string' ? { monthYear: params } : { ...params };
+      if (!effectiveParams.userId) {
+        const uid = getActiveUserId();
+        if (uid) effectiveParams.userId = uid;
+      }
+      const res = await apiClient.get('/budgets', { params: effectiveParams });
+      if (Array.isArray(res)) {
         return res.map((b) => ({
           id: b.budgetId || b.id,
-          categoryName: b.category ? b.category.categoryName : (b.categoryName || 'General'),
+          categoryName: b.category ? (b.category.categoryName || b.category) : (b.categoryName || 'General'),
           budgetLimit: parseFloat(b.monthlyLimit || b.budgetLimit || 0),
-          actualSpent: 0,
+          actualSpent: parseFloat(b.actualSpent || 0),
           alertThreshold: parseFloat(b.alertThreshold || 0.8),
         }));
       }
-      return null;
+      return [];
     } catch (err) {
       console.warn('Budgets API unavailable. Using state store.');
-      return null;
+      return [];
     }
   },
   save: async (budgetData) => {
     try {
+      const targetUserId = budgetData.userId || getActiveUserId();
       return await apiClient.post('/budgets', {
         id: budgetData.id,
         category: { categoryName: budgetData.categoryName },
         monthlyLimit: budgetData.budgetLimit,
         alertThreshold: budgetData.alertThreshold || 0.8,
         budgetMonth: '2026-11-01',
+        user: targetUserId ? { userId: targetUserId } : null,
       });
     } catch (err) {
       return budgetData;

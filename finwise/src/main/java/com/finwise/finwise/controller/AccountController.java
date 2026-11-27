@@ -27,7 +27,10 @@ public class AccountController {
     public ResponseEntity<List<Account>> getAllAccounts(
             @RequestParam(required = false) Long userId) {
         if (userId != null) {
-            return ResponseEntity.ok(accountService.getAllAccountsByUser(userId));
+            List<Account> userAccs = accountService.getAllAccountsByUser(userId);
+            if (!userAccs.isEmpty()) {
+                return ResponseEntity.ok(userAccs);
+            }
         }
         return ResponseEntity.ok(accountRepository.findAll());
     }

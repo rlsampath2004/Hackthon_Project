@@ -22,100 +22,10 @@ import ReportsView from './components/ReportsView';
 import { StatCardSkeleton, ChartSkeleton } from './components/SkeletonLoader';
 import { api } from './api/axiosClient';
 
-// Clean Zero-Default Data Structures
+// Clean Zero-Default Data Structures (Pristine live database connection)
 const initialBudgetsList = [];
 const initialAccountsList = [];
 const initialTransactions = [];
-
-// Curated Evaluation Demo Dataset (Accessible via 1-Click "Load Demo Dataset" Button)
-const DEMO_ACCOUNTS = [
-  { id: 1, accountName: 'Chase Premier Checking', accountType: 'BANK', balance: 6420.50, accountNumber: '•••• 4128' },
-  { id: 2, accountName: 'Amex Gold Rewards', accountType: 'CREDIT_CARD', balance: -1124.30, accountNumber: '•••• 9832' },
-  { id: 3, accountName: 'Apple Wallet / Cash', accountType: 'WALLET', balance: 450.00, accountNumber: '•••• 1204' },
-  { id: 4, accountName: 'Emergency High-Yield Savings', accountType: 'SAVINGS', balance: 14800.00, accountNumber: '•••• 7741' },
-];
-
-const DEMO_BUDGETS = [
-  { id: 1, categoryName: 'Food & Dining', budgetLimit: 400.0, actualSpent: 281.15, alertThreshold: 0.8 },
-  { id: 2, categoryName: 'Groceries', budgetLimit: 550.0, actualSpent: 384.60, alertThreshold: 0.8 },
-  { id: 3, categoryName: 'Transportation', budgetLimit: 200.0, actualSpent: 128.50, alertThreshold: 0.8 },
-  { id: 4, categoryName: 'Housing & Rent', budgetLimit: 1500.0, actualSpent: 1450.00, alertThreshold: 0.8 },
-  { id: 5, categoryName: 'Entertainment', budgetLimit: 120.0, actualSpent: 99.99, alertThreshold: 0.8 },
-  { id: 6, categoryName: 'Shopping & Retail', budgetLimit: 250.0, actualSpent: 239.90, alertThreshold: 0.8 },
-];
-
-const DEMO_TRANSACTIONS = [
-  {
-    id: 1,
-    merchant: 'Starbucks Coffee',
-    category: 'Food & Dining',
-    account: 'Amex Gold Rewards',
-    date: '2026-11-18',
-    amount: -18.75,
-    isAiTagged: true,
-    icon: 'bi-cup-hot-fill',
-  },
-  {
-    id: 2,
-    merchant: 'Freelance Payout (Stripe #412)',
-    category: 'Consulting Income',
-    account: 'Chase Premier Checking',
-    date: '2026-11-16',
-    amount: 1200.0,
-    isAiTagged: false,
-    icon: 'bi-briefcase-fill',
-  },
-  {
-    id: 3,
-    merchant: 'Nike Official Store',
-    category: 'Shopping & Retail',
-    account: 'Amex Gold Rewards',
-    date: '2026-11-14',
-    amount: -129.9,
-    isAiTagged: true,
-    icon: 'bi-bag-fill',
-  },
-  {
-    id: 4,
-    merchant: 'Apartment Rent (Avalon Estates)',
-    category: 'Housing & Rent',
-    account: 'Chase Premier Checking',
-    date: '2026-11-02',
-    amount: -1450.0,
-    isAiTagged: false,
-    icon: 'bi-house-door-fill',
-  },
-  {
-    id: 5,
-    merchant: 'Uber Airport Express',
-    category: 'Transportation',
-    account: 'Apple Wallet / Cash',
-    date: '2026-11-08',
-    amount: -28.5,
-    isAiTagged: true,
-    icon: 'bi-car-front-fill',
-  },
-  {
-    id: 6,
-    merchant: 'Netflix Premium 4K',
-    category: 'Entertainment',
-    account: 'Chase Premier Checking',
-    date: '2026-11-12',
-    amount: -19.99,
-    isAiTagged: true,
-    icon: 'bi-film',
-  },
-  {
-    id: 7,
-    merchant: 'Verizon High-Speed Fiber',
-    category: 'Utilities & Wifi',
-    account: 'Chase Premier Checking',
-    date: '2026-11-10',
-    amount: -85.00,
-    isAiTagged: true,
-    icon: 'bi-wifi',
-  },
-];
 
 export default function App() {
   const [activeNav, setActiveNav] = useState(() => (localStorage.getItem('finintel_user') ? 'dashboard' : 'intro'));
@@ -147,46 +57,48 @@ export default function App() {
     localStorage.setItem('finintel_theme', theme);
   }, [isDarkMode]);
 
-  // Initial Skeleton Loading & Live API Sync via Axios Client
-  useEffect(() => {
-    let isMounted = true;
-    async function syncBackendData() {
-      try {
-        const [backendAccs, backendTxs, backendBudgets] = await Promise.all([
-          api.getAccounts(),
-          api.getTransactions(),
-          api.getBudgets(),
-        ]);
+  // Live API Sync from Spring Boot Database via Axios Client
+  const syncBackendData = async (user = currentUser) => {
+    setIsLoading(true);
+    try {
+      const activeUser = user || (localStorage.getItem('finintel_user') ? JSON.parse(localStorage.getItem('finintel_user')) : null);
+      const userId = activeUser ? (activeUser.id || activeUser.userId) : null;
 
-        if (isMounted) {
-          if (backendAccs && Array.isArray(backendAccs) && backendAccs.length > 0) {
-            setAccounts(backendAccs);
-          }
-          if (backendTxs && Array.isArray(backendTxs) && backendTxs.length > 0) {
-            setTransactions(backendTxs);
-          }
-          if (backendBudgets && Array.isArray(backendBudgets) && backendBudgets.length > 0) {
-            setBudgets(backendBudgets);
-          }
-        }
-      } catch (err) {
-        console.warn('Axios API synchronization initialized in resilient local mode.');
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+      const [backendAccs, backendTxs, backendBudgets] = await Promise.all([
+        api.getAccounts(userId),
+        api.getTransactions(userId ? { userId } : {}),
+        api.getBudgets(userId ? { userId } : {}),
+      ]);
+
+      const txs = Array.isArray(backendTxs) ? backendTxs : [];
+      const accs = Array.isArray(backendAccs) ? backendAccs : [];
+      let bdgs = Array.isArray(backendBudgets) ? backendBudgets : [];
+
+      // Calculate real category spend from transactions for accurate budget tracking
+      bdgs = bdgs.map((b) => {
+        const spent = txs
+          .filter((t) => t.amount < 0 && t.category === b.categoryName)
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        return { ...b, actualSpent: spent };
+      });
+
+      setAccounts(accs);
+      setTransactions(txs);
+      setBudgets(bdgs);
+    } catch (err) {
+      console.warn('Axios API synchronization initialized in resilient local mode.', err);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const timer = setTimeout(() => {
-      syncBackendData();
-    }, 400);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []);
+  useEffect(() => {
+    if (currentUser) {
+      syncBackendData(currentUser);
+    } else {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
 
   // AOS Init
   useEffect(() => {
@@ -227,26 +139,6 @@ export default function App() {
     }, 300);
   };
 
-  // 1-Click Toggle for Judges / Evaluators
-  const handleLoadDemoDataset = () => {
-    setAccounts(DEMO_ACCOUNTS);
-    setBudgets(DEMO_BUDGETS);
-    setTransactions(DEMO_TRANSACTIONS);
-    if (!currentUser) {
-      const demoUser = {
-        id: 1,
-        name: 'Alex Vance',
-        email: 'demo@finintel.ai',
-        currency: 'USD',
-        role: 'ROLE_USER',
-        token: 'demo-jwt-token-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
-      };
-      setCurrentUser(demoUser);
-      localStorage.setItem('finintel_user', JSON.stringify(demoUser));
-      localStorage.setItem('finintel_token', demoUser.token);
-    }
-  };
-
   const handleClearAllData = () => {
     setAccounts([]);
     setBudgets([]);
@@ -254,13 +146,16 @@ export default function App() {
   };
 
   const handleAddTransaction = async (newTx) => {
-    setTransactions((prev) => [newTx, ...prev]);
+    const activeUser = currentUser || (localStorage.getItem('finintel_user') ? JSON.parse(localStorage.getItem('finintel_user')) : null);
+    const txWithUser = { ...newTx, userId: activeUser ? (activeUser.id || activeUser.userId) : null };
+
+    setTransactions((prev) => [txWithUser, ...prev]);
 
     // Update actual spend for corresponding category in budgets
     setBudgets((prev) =>
       prev.map((b) => {
         if (b.categoryName === newTx.category && newTx.amount < 0) {
-          return { ...b, actualSpent: b.actualSpent + Math.abs(newTx.amount) };
+          return { ...b, actualSpent: (b.actualSpent || 0) + Math.abs(newTx.amount) };
         }
         return b;
       })
@@ -276,13 +171,15 @@ export default function App() {
       })
     );
 
-    // Persist via Axios client
-    const saved = await api.createTransaction(newTx);
+    // Persist via Axios client to backend database
+    const saved = await api.createTransaction(txWithUser);
     if (saved && (saved.transactionId || saved.id)) {
       setTransactions((prev) =>
         prev.map((t) => (t.id === newTx.id ? { ...t, id: saved.transactionId || saved.id } : t))
       );
     }
+    // Refresh live records from database
+    syncBackendData(activeUser);
   };
 
   const handleDeleteTransaction = async (id) => {
@@ -296,7 +193,7 @@ export default function App() {
       setBudgets((prev) =>
         prev.map((b) => {
           if (b.categoryName === txToDelete.category) {
-            return { ...b, actualSpent: Math.max(0, b.actualSpent - Math.abs(txToDelete.amount)) };
+            return { ...b, actualSpent: Math.max(0, (b.actualSpent || 0) - Math.abs(txToDelete.amount)) };
           }
           return b;
         })
@@ -315,19 +212,27 @@ export default function App() {
 
     // Delete via Axios client
     await api.deleteTransaction(id);
+    syncBackendData();
   };
 
   const handleAddAccount = async (newAccount) => {
-    setAccounts((prev) => [...prev, newAccount]);
-    const saved = await api.createAccount(newAccount);
+    const activeUser = currentUser || (localStorage.getItem('finintel_user') ? JSON.parse(localStorage.getItem('finintel_user')) : null);
+    const accWithUser = { ...newAccount, userId: activeUser ? (activeUser.id || activeUser.userId) : null };
+
+    setAccounts((prev) => [...prev, accWithUser]);
+    const saved = await api.createAccount(accWithUser);
     if (saved && (saved.accountId || saved.id)) {
       setAccounts((prev) =>
         prev.map((a) => (a.accountName === newAccount.accountName ? { ...a, id: saved.accountId || saved.id } : a))
       );
     }
+    syncBackendData(activeUser);
   };
 
   const handleSaveBudget = async (newBudget) => {
+    const activeUser = currentUser || (localStorage.getItem('finintel_user') ? JSON.parse(localStorage.getItem('finintel_user')) : null);
+    const budgetWithUser = { ...newBudget, userId: activeUser ? (activeUser.id || activeUser.userId) : null };
+
     setBudgets((prev) => {
       const existingIndex = prev.findIndex(
         (b) => b.id === newBudget.id || b.categoryName === newBudget.categoryName
@@ -336,20 +241,21 @@ export default function App() {
         const updated = [...prev];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          ...newBudget,
+          ...budgetWithUser,
           actualSpent: updated[existingIndex].actualSpent ?? newBudget.actualSpent ?? 0,
         };
         return updated;
       }
-      return [...prev, newBudget];
+      return [...prev, budgetWithUser];
     });
 
-    const saved = await api.saveBudget(newBudget);
+    const saved = await api.saveBudget(budgetWithUser);
     if (saved && (saved.budgetId || saved.id)) {
       setBudgets((prev) =>
         prev.map((b) => (b.categoryName === newBudget.categoryName ? { ...b, id: saved.budgetId || saved.id } : b))
       );
     }
+    syncBackendData(activeUser);
   };
 
   const handleDeleteBudget = async (id) => {
@@ -451,29 +357,23 @@ export default function App() {
               </div>
 
               <div className="d-flex flex-wrap align-items-center gap-2">
-                {/* 1-Click Evaluation Dataset Helper Controls */}
-                {transactions.length === 0 ? (
-                  <button
-                    onClick={handleLoadDemoDataset}
-                    className="btn btn-sm btn-outline-info d-flex align-items-center gap-1.5 px-3 py-1.5"
-                    title="Load comprehensive demo financial dataset for evaluation"
-                  >
-                    <i className="bi bi-database-fill-add text-warning"></i>
-                    <span>Load Demo Dataset</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleClearAllData}
-                    className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-2.5 py-1.5"
-                    title="Reset to clean zero-data state"
-                  >
-                    <i className="bi bi-trash3"></i>
-                    <span>Clear Data</span>
-                  </button>
-                )}
-
+                <button
+                  onClick={() => syncBackendData()}
+                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 px-3 py-1.5"
+                  title="Synchronize live records with SQL Database"
+                >
+                  <i className="bi bi-arrow-clockwise"></i>
+                  <span>Sync Database</span>
+                </button>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="btn btn-sm btn-primary d-flex align-items-center gap-1.5 px-3 py-1.5"
+                >
+                  <i className="bi bi-plus-circle-fill"></i>
+                  <span>Add Transaction</span>
+                </button>
                 <span className="badge bg-secondary-subtle text-secondary font-mono-num p-2 px-2.5">
-                  <i className="bi bi-calendar3 me-1"></i> Nov 2026
+                  <i className="bi bi-database-check me-1 text-success"></i> Live DB
                 </span>
                 <button
                   onClick={() => handleNavigate('budgets')}
@@ -642,6 +542,7 @@ export default function App() {
             onAuthSuccess={(user) => {
               setCurrentUser(user);
               handleNavigate('dashboard', user);
+              syncBackendData(user);
             }}
             onNavigateToRegister={() => handleNavigate('register')}
             onNavigateToIntro={() => handleNavigate('intro')}
@@ -656,6 +557,7 @@ export default function App() {
             onAuthSuccess={(user) => {
               setCurrentUser(user);
               handleNavigate('dashboard', user);
+              syncBackendData(user);
             }}
             onNavigateToLogin={() => handleNavigate('login')}
             onNavigateToIntro={() => handleNavigate('intro')}

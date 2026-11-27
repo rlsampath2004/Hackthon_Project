@@ -29,7 +29,10 @@ public class BudgetController {
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String monthYear) {
         if (userId != null) {
-            return ResponseEntity.ok(budgetService.getAllBudgetsByUser(userId));
+            List<Budget> userBudgets = budgetService.getAllBudgetsByUser(userId);
+            if (!userBudgets.isEmpty()) {
+                return ResponseEntity.ok(userBudgets);
+            }
         }
         return ResponseEntity.ok(budgetRepository.findAll());
     }

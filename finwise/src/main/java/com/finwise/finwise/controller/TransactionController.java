@@ -28,10 +28,16 @@ public class TransactionController {
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String transactionType) {
         if (userId != null && transactionType != null) {
-            return ResponseEntity.ok(transactionService.getTransactionsByType(userId, transactionType));
+            List<Transaction> txs = transactionService.getTransactionsByType(userId, transactionType);
+            if (!txs.isEmpty()) {
+                return ResponseEntity.ok(txs);
+            }
         }
         if (userId != null) {
-            return ResponseEntity.ok(transactionService.getAllTransactionsByUser(userId));
+            List<Transaction> userTxs = transactionService.getAllTransactionsByUser(userId);
+            if (!userTxs.isEmpty()) {
+                return ResponseEntity.ok(userTxs);
+            }
         }
         return ResponseEntity.ok(transactionRepository.findAll());
     }

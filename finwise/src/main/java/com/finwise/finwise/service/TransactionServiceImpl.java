@@ -71,15 +71,55 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Transaction createTransaction(Transaction transaction) {
-        if (transaction.getUser() == null || transaction.getUser().getUserId() == null) {
-            transaction.setUser(resolveDefaultUser());
+        User user = null;
+        if (transaction.getUser() != null && transaction.getUser().getUserId() != null) {
+            user = userRepository.findById(transaction.getUser().getUserId()).orElse(null);
         }
-        if (transaction.getAccount() == null || transaction.getAccount().getAccountId() == null) {
-            transaction.setAccount(resolveDefaultAccount(transaction.getUser()));
+        if (user == null) {
+            user = resolveDefaultUser();
         }
+        transaction.setUser(user);
+
+        // Resolve account: first check by ID, then check by accountName for this user, else default
+        Account targetAccount = null;
+        if (transaction.getAccount() != null) {
+            if (transaction.getAccount().getAccountId() != null) {
+                targetAccount = accountRepository.findById(transaction.getAccount().getAccountId()).orElse(null);
+            } else if (transaction.getAccount().getAccountName() != null && !transaction.getAccount().getAccountName().isBlank()) {
+                String accName = transaction.getAccount().getAccountName().trim();
+                targetAccount = accountRepository.findByUser_UserId(user.getUserId()).stream()
+                        .filter(a -> a.getAccountName() != null && a.getAccountName().equalsIgnoreCase(accName))
+                        .findFirst()
+                        .orElse(null);
+                if (targetAccount == null) {
+                    Account newAcc = new Account();
+                    newAcc.setUser(user);
+                    newAcc.setAccountName(accName);
+                    newAcc.setAccountType("BANK");
+                    newAcc.setOpeningBalance(java.math.BigDecimal.valueOf(1000));
+                    targetAccount = accountRepository.save(newAcc);
+                }
+            }
+        }
+        if (targetAccount == null) {
+            targetAccount = resolveDefaultAccount(user);
+        }
+        transaction.setAccount(targetAccount);
+
+        // Update target account balance in database
+        if (transaction.getAmount() != null) {
+            java.math.BigDecimal curBalance = targetAccount.getOpeningBalance() != null ? targetAccount.getOpeningBalance() : java.math.BigDecimal.ZERO;
+            if ("INCOME".equalsIgnoreCase(transaction.getTransactionType())) {
+                targetAccount.setOpeningBalance(curBalance.add(transaction.getAmount()));
+            } else {
+                targetAccount.setOpeningBalance(curBalance.subtract(transaction.getAmount()));
+            }
+            accountRepository.save(targetAccount);
+        }
+
         if (transaction.getCategory() == null || transaction.getCategory().getCategoryId() == null) {
             String catName = transaction.getCategory() != null ? transaction.getCategory().getCategoryName() : null;
-            transaction.setCategory(resolveDefaultCategory(transaction.getUser(), catName));
+            transaction.setCategory(resolveDefaultCategory(user, catName));
         }
         if (transaction.getTransactionDate() == null) {
             transaction.setTransactionDate(LocalDate.now());
@@ -123,6 +163,16 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void deleteTransaction(Long transactionId) {
         Transaction existingTransaction = getTransactionById(transactionId);
+        if (existingTransaction.getAccount() != null && existingTransaction.getAmount() != null) {
+            Account acc = existingTransaction.getAccount();
+            java.math.BigDecimal cur = acc.getOpeningBalance() != null ? acc.getOpeningBalance() : java.math.BigDecimal.ZERO;
+            if ("INCOME".equalsIgnoreCase(existingTransaction.getTransactionType())) {
+                acc.setOpeningBalance(cur.subtract(existingTransaction.getAmount()));
+            } else {
+                acc.setOpeningBalance(cur.add(existingTransaction.getAmount()));
+            }
+            accountRepository.save(acc);
+        }
         transactionRepository.delete(existingTransaction);
     }
 }
